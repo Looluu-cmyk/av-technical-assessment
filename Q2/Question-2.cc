@@ -5,22 +5,30 @@
 #include <iomanip>
 #include <atomic>
 #include <numeric>
+#include <mutex>
+#include <queue>
 
 template<typename T>
 class ThreadSafeQueue {
 private:
     // Implement this
+    std::mutex mtx;
+    std::queue<T> queue;
 public:
     void push(T value) {
         // Implement this
+        std::lock_guard<std::mutex> lock(mtx);
+        queue.push(value);
     }
     T pop() {
         // Implement this
-        return nullptr;
+        std::lock_guard<std::mutex> lock(mtx);
+        return queue.pop();
     }
     size_t size() {
         // Implement this
-        return 0;
+        std::lock_guard<std::mutex> lock(mtx);
+        return queue.size();
     }
     // A non-blocking pop for graceful shutdown
     T pop_for_shutdown() {
@@ -41,24 +49,24 @@ public:
 class SimpleTask : public ITask {
 private:
     // You can define the members as per your requirement
-    float val;
+    float val_;
 public:
-    explicit SimpleTask(float val): val(val) {}
+    explicit SimpleTask(float val): val_(val) {}
     // Implement the necessary functions
     void process() override {
-        val *= 2.0;
+        val_ *= 2.0;
     }
 };
 
 class ComplexTask : public ITask {
 private:
     // You can define the members as per your requirement
-    std::vector<int> nums;
+    std::vector<int> nums_;
 public:
-    explicit ComplexTask(std::vector<int> nums): nums(nums) {}
+    explicit ComplexTask(std::vector<int> nums): nums_(nums) {}
     // Implement the necessary functions
     void process() override {
-        std::accumulate(nums.begin(), nums.end(), 0);
+        std::accumulate(nums_.begin(), nums_.end(), 0);
     }
 };
 
@@ -72,6 +80,12 @@ public:
         : task_queue_(queue), shutdown_(shutdown) {}
     void run() {
         // Implement the task generation loop with a shutdown check
+        while (true) {
+            if (shutdown_) {
+                task_queue_.pop_for_shutdown();
+                break;
+            }
+        }
     }
 };
 
@@ -85,6 +99,19 @@ public:
         : task_queue_(t_queue), processed_queue_(p_queue), shutdown_(shutdown) {}
     void run() {
         // Implement the data processing loop with a shutdown check
+        while (true) {
+            if (task_queue_.size() != 0) {
+                auto task = task_queue_.pop();
+                task.get()->process();
+                processed_queue_.push(std::move(task));
+            }
+
+            if (shutdown_) {
+                task_queue_.pop_for_shutdown();
+                processed_queue_.pop_for_shutdown();
+                break;
+            }
+        }
     }
 };
 
@@ -97,6 +124,16 @@ public:
         : processed_queue_(queue), shutdown_(shutdown) {}
     void run() {
         // Implement the data transmission (bitpacking) loop with a shutdown check
+        while (true) {
+            if (processed_queue_.size() != 0) {
+                auto task = processed_queue_.pop();
+            }
+
+            if (shutdown_) {
+                processed_queue_.pop_for_shutdown();
+                break;
+            }
+        }
     }
     void transmit(const std::unique_ptr<ITask>& data, std::ostream& os) {
         uint8_t buffer[8] = {0};
