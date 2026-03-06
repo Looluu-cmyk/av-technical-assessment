@@ -4,6 +4,7 @@
 #include <memory>
 #include <iomanip>
 #include <atomic>
+#include <numeric>
 
 template<typename T>
 class ThreadSafeQueue {
@@ -40,17 +41,25 @@ public:
 class SimpleTask : public ITask {
 private:
     // You can define the members as per your requirement
+    float val;
 public:
-    explicit SimpleTask(float val) {}
+    explicit SimpleTask(float val): val(val) {}
     // Implement the necessary functions
+    void process() override {
+        val *= 2.0;
+    }
 };
 
 class ComplexTask : public ITask {
 private:
     // You can define the members as per your requirement
+    std::vector<int> nums;
 public:
-    explicit ComplexTask(std::vector<int> nums) {}
+    explicit ComplexTask(std::vector<int> nums): nums(nums) {}
     // Implement the necessary functions
+    void process() override {
+        std::accumulate(nums.begin(), nums.end(), 0);
+    }
 };
 
 
