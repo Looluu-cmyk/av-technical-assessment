@@ -56,17 +56,34 @@ public:
     void process() override {
         val_ *= 2.0;
     }
+
+    float getProcessedValue() const override {
+        return val_;
+    }
+
+    uint8_t getTaskType() const override {
+        return 0;
+    }
 };
 
 class ComplexTask : public ITask {
 private:
     // You can define the members as per your requirement
     std::vector<int> nums_;
+    int val_;
 public:
     explicit ComplexTask(std::vector<int> nums): nums_(nums) {}
     // Implement the necessary functions
     void process() override {
-        std::accumulate(nums_.begin(), nums_.end(), 0);
+        val_ = std::accumulate(nums_.begin(), nums_.end(), 0);
+    }
+
+    float getProcessedValue() const override {
+        return val_;
+    }
+
+    uint8_t getTaskType() const override {
+        return 0b01 << 6;
     }
 };
 
@@ -140,6 +157,21 @@ public:
         
         // Bitpacking logic
         // Implement the bitpacking logic here
+        auto now = std::chrono::system_clock::now();
+        auto milliseconds = std::chrono::duration_cast<std::chrono::milliseconds>(
+            now.time_since_epoch()
+        ).count();
+
+        buffer[0] = data.get()->getTaskType();
+
+        float processed_value = data.get()->getProcessedValue();
+        for (int i = 0; i < 4; i++) {
+            buffer[i + 1] = (int) processed_value >> (i * 8);
+        }
+
+        for (int i = 0; i < 3; i++) {
+            buffer[i + 5] = milliseconds >> (8 * (2 - i));
+        }
 
         // Print the buffer in hex format for verification
         os << "Packet: ";
