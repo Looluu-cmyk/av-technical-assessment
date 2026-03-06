@@ -1,0 +1,1 @@
+/usr/bin/c++ -Wl,--dependency-file=CMakeFiles/Question-1-out.dir/link.d "CMakeFiles/Question-1-out.dir/Q1/Question-1.cc.o" -o Question-1-out  -lpthread

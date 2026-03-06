@@ -1,0 +1,7 @@
+{
+	"InstallScripts" : 
+	[
+		"/home/nzk0/redback/av-technical-assessment/build/cmake_install.cmake"
+	],
+	"Parallel" : false
+}

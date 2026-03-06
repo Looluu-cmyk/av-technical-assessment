@@ -1,0 +1,6 @@
+/home/nzk0/redback/av-technical-assessment/build/CMakeFiles/Question-1-out.dir
+/home/nzk0/redback/av-technical-assessment/build/CMakeFiles/Question-2-out.dir
+/home/nzk0/redback/av-technical-assessment/build/CMakeFiles/Question-3-out.dir
+/home/nzk0/redback/av-technical-assessment/build/CMakeFiles/test.dir
+/home/nzk0/redback/av-technical-assessment/build/CMakeFiles/edit_cache.dir
+/home/nzk0/redback/av-technical-assessment/build/CMakeFiles/rebuild_cache.dir
