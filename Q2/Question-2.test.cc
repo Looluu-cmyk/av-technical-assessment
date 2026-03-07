@@ -90,3 +90,53 @@ TEST(BitPackingTests, SimpleTask) {
 
     input_file.close();
 }
+
+TEST(BitPackingTests, ComplexTask) {
+    std::vector<int> v = {1, 2, 3, 4};
+    ThreadSafeQueue<std::unique_ptr<ITask>> task_queue;
+    task_queue.push(std::make_unique<ComplexTask>(std::move(v)));
+
+    ThreadSafeQueue<std::unique_ptr<ITask>> processed_queue;
+
+    std::atomic<bool> shutdown_flag{false};
+
+    std::filesystem::path temp_dir;
+    temp_dir = std::filesystem::temp_directory_path();
+    std::filesystem::create_directory(temp_dir);
+    std::filesystem::path temp_file_path = temp_dir / "output.txt";
+    std::ofstream output_file(temp_file_path);
+    ASSERT_TRUE(output_file.is_open());
+
+    TaskProcessor processor(task_queue, processed_queue, shutdown_flag);
+    PacketTransmitter transmitter(processed_queue, shutdown_flag, output_file);
+    std::thread processor_thread(&TaskProcessor::run, &processor);
+    std::thread transmitter_thread(&PacketTransmitter::run, &transmitter);
+
+    auto now = std::chrono::system_clock::now();
+    auto milliseconds = std::chrono::duration_cast<std::chrono::milliseconds>(
+        now.time_since_epoch()
+    ).count();
+
+    std::string expected_output = "Packet: 0x40 0x0a 0x00 0x00 0x00 ";
+    std::stringstream ss;
+    for (int i = 0; i < 3; i++) {
+        uint8_t bytes = (milliseconds >> (8 * (2 - i)));
+        ss << "0x" << std::setw(2) << std::setfill('0') << std::hex << (int) bytes << " ";
+    }
+    expected_output += ss.str();
+
+    std::this_thread::sleep_for(std::chrono::seconds(2));
+
+    shutdown_flag = true;
+
+    processor_thread.join();
+    transmitter_thread.join();
+    output_file.close();
+
+    std::ifstream input_file(temp_file_path);
+    std::string content;
+    std::getline(input_file, content);
+    EXPECT_EQ(content, expected_output);
+
+    input_file.close();
+}
