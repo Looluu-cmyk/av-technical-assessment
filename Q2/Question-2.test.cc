@@ -91,6 +91,7 @@ TEST(BitPackingTests, SimpleTask) {
     input_file.close();
 }
 
+// could potentially create a testing class which sets up temp_dir test environment
 TEST(BitPackingTests, ComplexTask) {
     std::vector<int> v = {1, 2, 3, 4};
     ThreadSafeQueue<std::unique_ptr<ITask>> task_queue;
