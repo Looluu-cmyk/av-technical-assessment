@@ -52,6 +52,12 @@
 
 // realisation:
 // - need to reliably figure out whether a triangle is still inside the track or outside the track
+// - maybe apply some kind of threshold?
+// - consecutive cones along the same inner edge must be <5m
+// - cones perpendicular to inner/outer edge and exist on other edge must be >3m
+// - this would be really easy if we can distinguish outside and inside cones
+// because then the next triangle has to be one that contains both an outside
+// and inside cone
 
 int main() {
     return 0;
