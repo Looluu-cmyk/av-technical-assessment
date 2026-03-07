@@ -50,6 +50,9 @@
 // - going with idea 2, how the heck will i ever do this?
 // - online library in c++: CGAL
 
+// realisation:
+// - need to reliably figure out whether a triangle is still inside the track or outside the track
+
 int main() {
     return 0;
 }
