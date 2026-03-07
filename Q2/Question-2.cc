@@ -7,6 +7,8 @@
 #include <numeric>
 #include <mutex>
 #include <queue>
+#include <chrono>
+#include <bitset>
 
 template<typename T>
 class ThreadSafeQueue {
@@ -18,12 +20,18 @@ public:
     void push(T value) {
         // Implement this
         std::lock_guard<std::mutex> lock(mtx);
-        queue.push(value);
+        queue.push(std::move(value));
     }
     T pop() {
         // Implement this
         std::lock_guard<std::mutex> lock(mtx);
-        return queue.pop();
+        if (queue.size() != 0) {
+            T ret = std::move(queue.front());
+            queue.pop();
+            return ret;
+        } else {
+            return nullptr;
+        }
     }
     size_t size() {
         // Implement this
@@ -33,6 +41,10 @@ public:
     // A non-blocking pop for graceful shutdown
     T pop_for_shutdown() {
         // Implement this
+        std::lock_guard<std::mutex> lock(mtx);
+        while (!queue.empty()) {
+            queue.pop();
+        }
         return nullptr;
     }
 };
@@ -97,6 +109,8 @@ public:
         : task_queue_(queue), shutdown_(shutdown) {}
     void run() {
         // Implement the task generation loop with a shutdown check
+        task_queue_.push(std::make_unique<SimpleTask>(10.f));
+
         while (true) {
             if (shutdown_) {
                 task_queue_.pop_for_shutdown();
@@ -117,8 +131,7 @@ public:
     void run() {
         // Implement the data processing loop with a shutdown check
         while (true) {
-            if (task_queue_.size() != 0) {
-                auto task = task_queue_.pop();
+            if (auto task = task_queue_.pop()) {
                 task.get()->process();
                 processed_queue_.push(std::move(task));
             }
@@ -136,14 +149,15 @@ class PacketTransmitter {
 private:
     ThreadSafeQueue<std::unique_ptr<ITask>>& processed_queue_;
     std::atomic<bool>& shutdown_;
+    std::ostream& stream_;
 public:
-    PacketTransmitter(ThreadSafeQueue<std::unique_ptr<ITask>>& queue, std::atomic<bool>& shutdown)
-        : processed_queue_(queue), shutdown_(shutdown) {}
+    PacketTransmitter(ThreadSafeQueue<std::unique_ptr<ITask>>& queue, std::atomic<bool>& shutdown, std::ostream& stream)
+        : processed_queue_(queue), shutdown_(shutdown), stream_(stream) {}
     void run() {
         // Implement the data transmission (bitpacking) loop with a shutdown check
         while (true) {
-            if (processed_queue_.size() != 0) {
-                auto task = processed_queue_.pop();
+            if (auto task = processed_queue_.pop()) {
+                transmit(task, stream_);
             }
 
             if (shutdown_) {
@@ -166,7 +180,7 @@ public:
 
         float processed_value = data.get()->getProcessedValue();
         for (int i = 0; i < 4; i++) {
-            buffer[i + 1] = (int) processed_value >> (i * 8);
+            buffer[i + 1] = (int) processed_value >> (8 * i);
         }
 
         for (int i = 0; i < 3; i++) {
@@ -182,6 +196,7 @@ public:
     }
 };
 
+#ifndef Q2_BUILDING_TESTS
 int main() {
     std::cout << "Starting the data generation pipeline" << std::endl;
 
@@ -192,11 +207,11 @@ int main() {
 
     TaskGenerator generator(task_queue, shutdown_flag);
     TaskProcessor processor(task_queue, processed_queue, shutdown_flag);
-    PacketTransmitter transmitter(processed_queue, shutdown_flag);
+    PacketTransmitter transmitter(processed_queue, shutdown_flag, std::cout);
 
     std::thread generator_thread(&TaskGenerator::run, &generator);
     std::thread processor_thread(&TaskProcessor::run, &processor);
-    std::thread transmitter_thread(&PacketTransmitter::run, &transmitter, std::ref(std::cout));
+    std::thread transmitter_thread(&PacketTransmitter::run, &transmitter);
 
     std::this_thread::sleep_for(std::chrono::seconds(10));
 
@@ -210,3 +225,4 @@ int main() {
 
     return 0;
 }
+#endif
