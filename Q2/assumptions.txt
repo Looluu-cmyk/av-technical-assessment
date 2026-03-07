@@ -1,0 +1,4 @@
+bitpacking logic wants the data output in little endian reading from left -> right
+
+PacketTransmitter Class needs an output stream when constructed to determine
+where to transmit
